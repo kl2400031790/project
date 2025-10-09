@@ -1,0 +1,162 @@
+/* Theme */
+:root {
+  --bg: #f7f9fc;
+  --surface: #ffffff;
+  --text: #2d3748;
+  --muted: #6b7280;
+  --primary: #22c55e;
+  --primary-dark: #16a34a;
+  --ring: #a7f3d0;
+  --border: #e5e7eb;
+}
+
+/* Layout */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+}
+.brand {
+  font-weight: 700;
+  color: var(--text);
+}
+.nav {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.nav a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.nav a:hover { 
+  color: var(--text); 
+  background-color: #f3f4f6;
+}
+
+.nav-button {
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+}
+
+.nav-button:hover {
+  background-color: #f9fafb;
+  border-color: var(--primary);
+}
+
+.signup-btn {
+  background-color: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.signup-btn:hover {
+  background-color: var(--primary-dark);
+  color: white;
+}
+
+.signin-btn {
+  background-color: transparent;
+  color: var(--text);
+}
+
+.container {
+  max-width: 1024px;
+  margin: 24px auto;
+  padding: 0 16px;
+}
+
+.section-title {
+  margin: 0 0 8px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  margin-bottom: 16px;
+}
+
+/* Controls */
+button {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  margin-left: 6px;
+  border-radius: 8px;
+}
+button:hover { background-color: var(--primary-dark); }
+
+input[type="text"], input[type="number"], select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+input:focus, select:focus {
+  outline: 2px solid var(--ring);
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 10px;
+  background-color: #fff;
+}
+th, td {
+  border: 1px solid var(--border);
+  text-align: left;
+  padding: 10px;
+}
+th {
+  background-color: #f3f4f6;
+  color: var(--text);
+}
+tbody tr:nth-child(odd) { background: #fafafa; }
+
+/* Sign in */
+.signin-container {
+  max-width: 420px;
+  margin: 60px auto;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-align: center;
+  background-color: var(--surface);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+.signin-container input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.signin-container button {
+  padding: 12px 20px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--primary);
+  color: white;
+  cursor: pointer;
+}
+.signin-container .error { color: #dc2626; margin-top: 10px; }
