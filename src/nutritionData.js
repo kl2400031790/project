@@ -14,19 +14,26 @@ export const DEFAULT_FOODS = [
   { id: "fortified_cereal", name: "Fortified Cereal", calories: 357, protein_g: 8, iron_mg: 28, vitaminC_mg: 0, calcium_mg: 20, vitaminD_IU: 40 }
 ];
 
-// Recommended Daily Allowances (approx.) for children/adolescents
+// Recommended Daily Allowances (approx.) for all ages
 // Source approximations; simplified per age band and sex-neutral for demo
 // calories are targets per day; protein in g; iron/VitC/calcium mg; vitamin D IU
 export const DEFAULT_RDA = [
   { id: "4-8", label: "Age 4-8", calories: 1400, protein_g: 19, iron_mg: 10, vitaminC_mg: 25, calcium_mg: 1000, vitaminD_IU: 600 },
   { id: "9-13", label: "Age 9-13", calories: 1800, protein_g: 34, iron_mg: 8, vitaminC_mg: 45, calcium_mg: 1300, vitaminD_IU: 600 },
-  { id: "14-18", label: "Age 14-18", calories: 2200, protein_g: 46, iron_mg: 11, vitaminC_mg: 65, calcium_mg: 1300, vitaminD_IU: 600 }
+  { id: "14-18", label: "Age 14-18", calories: 2200, protein_g: 46, iron_mg: 11, vitaminC_mg: 65, calcium_mg: 1300, vitaminD_IU: 600 },
+  { id: "19-30", label: "Age 19-30", calories: 2400, protein_g: 56, iron_mg: 8, vitaminC_mg: 90, calcium_mg: 1000, vitaminD_IU: 600 },
+  { id: "31-50", label: "Age 31-50", calories: 2200, protein_g: 56, iron_mg: 8, vitaminC_mg: 90, calcium_mg: 1000, vitaminD_IU: 600 },
+  { id: "51+", label: "Age 51+", calories: 2000, protein_g: 56, iron_mg: 8, vitaminC_mg: 90, calcium_mg: 1200, vitaminD_IU: 800 }
 ];
 
 export function findRdaForAge(age) {
-  if (age <= 8) return DEFAULT_RDA[0];
-  if (age <= 13) return DEFAULT_RDA[1];
-  return DEFAULT_RDA[2];
+  const numAge = Number(age) || 19;
+  if (numAge <= 8) return DEFAULT_RDA[0];
+  if (numAge <= 13) return DEFAULT_RDA[1];
+  if (numAge <= 18) return DEFAULT_RDA[2];
+  if (numAge <= 30) return DEFAULT_RDA[3];
+  if (numAge <= 50) return DEFAULT_RDA[4];
+  return DEFAULT_RDA[5];
 }
 
 

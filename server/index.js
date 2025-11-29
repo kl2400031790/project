@@ -12,7 +12,15 @@ app.get('/api/health', (req, res) => {
 });
 
 // Load users from file
-let users = loadUsers();
+let users = [];
+try {
+  users = loadUsers();
+  console.log(`Loaded ${users.length} users from storage`);
+} catch (error) {
+  console.error('Error loading users at startup:', error);
+  console.error('Starting with empty users array');
+  users = [];
+}
 
 // Foods data
 let foods = [
@@ -28,11 +36,14 @@ let foods = [
   { id: "fortified_cereal", name: "Fortified Cereal", calories: 357, protein_g: 8, iron_mg: 28, vitaminC_mg: 0, calcium_mg: 20, vitaminD_IU: 40 }
 ];
 
-// RDA data
+// RDA data - supports all ages
 let rdas = [
   { id: "4-8", label: "Age 4-8", calories: 1400, protein_g: 19, iron_mg: 10, vitaminC_mg: 25, calcium_mg: 1000, vitaminD_IU: 600 },
   { id: "9-13", label: "Age 9-13", calories: 1800, protein_g: 34, iron_mg: 8, vitaminC_mg: 45, calcium_mg: 1300, vitaminD_IU: 600 },
-  { id: "14-18", label: "Age 14-18", calories: 2200, protein_g: 46, iron_mg: 11, vitaminC_mg: 65, calcium_mg: 1300, vitaminD_IU: 600 }
+  { id: "14-18", label: "Age 14-18", calories: 2200, protein_g: 46, iron_mg: 11, vitaminC_mg: 65, calcium_mg: 1300, vitaminD_IU: 600 },
+  { id: "19-30", label: "Age 19-30", calories: 2400, protein_g: 56, iron_mg: 8, vitaminC_mg: 90, calcium_mg: 1000, vitaminD_IU: 600 },
+  { id: "31-50", label: "Age 31-50", calories: 2200, protein_g: 56, iron_mg: 8, vitaminC_mg: 90, calcium_mg: 1000, vitaminD_IU: 600 },
+  { id: "51+", label: "Age 51+", calories: 2000, protein_g: 56, iron_mg: 8, vitaminC_mg: 90, calcium_mg: 1200, vitaminD_IU: 800 }
 ];
 
 // Meals storage
@@ -51,8 +62,8 @@ app.post('/api/auth/signup', (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
     
-    if (password.length < 3) {
-      return res.status(400).json({ error: 'Password must be at least 3 characters' });
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
     
     // Check if email already exists
@@ -70,7 +81,23 @@ app.post('/api/auth/signup', (req, res) => {
     };
     
     users.push(newUser);
-    saveUsers(users);
+    
+    try {
+      saveUsers(users);
+    } catch (saveError) {
+      console.error('Error saving users:', saveError);
+      console.error('Save error details:', {
+        message: saveError.message,
+        code: saveError.code,
+        stack: saveError.stack
+      });
+      // Remove the user we just added since save failed
+      users.pop();
+      return res.status(500).json({ 
+        error: 'Failed to save user data. Please check server logs for details.',
+        details: process.env.NODE_ENV === 'development' ? saveError.message : undefined
+      });
+    }
     
     // Return user without password
     const { password: _, ...userResponse } = newUser;
@@ -78,36 +105,118 @@ app.post('/api/auth/signup', (req, res) => {
     
   } catch (error) {
     console.error('Signup error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    });
+    res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
 app.post('/api/auth/login', (req, res) => {
   try {
-    const { email, password } = req.body;
+    console.log('Login request received');
+    console.log('Request body:', JSON.stringify(req.body));
+    
+    const { email, password } = req.body || {};
     
     // Validation
     if (!email || !password) {
+      console.log('Validation failed: missing email or password');
       return res.status(400).json({ error: 'Email and password are required' });
     }
     
+    console.log(`Attempting login for email: ${email}`);
+    
+    // Reload users from file to ensure we have the latest data
+    let loadedUsers;
+    try {
+      loadedUsers = loadUsers();
+      console.log(`Loaded ${loadedUsers.length} users for login attempt`);
+      users = loadedUsers;
+    } catch (loadError) {
+      console.error('Error loading users during login:', loadError);
+      console.error('Load error stack:', loadError.stack);
+      return res.status(500).json({ 
+        error: 'Failed to load user data. Please try again later.',
+        details: process.env.NODE_ENV === 'development' ? loadError.message : undefined
+      });
+    }
+    
+    // Ensure users is an array
+    if (!Array.isArray(users)) {
+      console.error('Users is not an array:', typeof users, users);
+      users = [];
+    }
+    
+    console.log(`Searching through ${users.length} users`);
+    
     // Find user
-    const user = users.find(u => 
-      u.email.toLowerCase() === email.toLowerCase() && 
-      u.password === password
-    );
+    let user = null;
+    try {
+      user = users.find(u => {
+        if (!u || !u.email || !u.password) {
+          return false;
+        }
+        return u.email.toLowerCase() === email.toLowerCase() && 
+               u.password === password;
+      });
+    } catch (findError) {
+      console.error('Error finding user:', findError);
+      console.error('Find error stack:', findError.stack);
+      return res.status(500).json({ 
+        error: 'Error processing login request',
+        details: process.env.NODE_ENV === 'development' ? findError.message : undefined
+      });
+    }
     
     if (!user) {
+      console.log(`Login failed for email: ${email} - user not found or password incorrect`);
       return res.status(401).json({ error: 'Invalid email or password' });
     }
     
+    // Validate user object structure
+    if (typeof user !== 'object' || user === null) {
+      console.error('Invalid user object structure:', user);
+      return res.status(500).json({ error: 'Invalid user data structure' });
+    }
+    
     // Return user without password
-    const { password: _, ...userResponse } = user;
-    res.json(userResponse);
+    try {
+      const { password: _, ...userResponse } = user;
+      console.log(`Login successful for user: ${user.email} (role: ${user.role})`);
+      res.json(userResponse);
+    } catch (responseError) {
+      console.error('Error creating response:', responseError);
+      console.error('Response error stack:', responseError.stack);
+      return res.status(500).json({ 
+        error: 'Error creating login response',
+        details: process.env.NODE_ENV === 'development' ? responseError.message : undefined
+      });
+    }
     
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Login error (outer catch):', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      type: typeof error
+    });
+    
+    // Make sure we always send a response
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Internal server error. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
   }
 });
 
@@ -162,9 +271,13 @@ app.post("/api/meals/:userId", (req, res) => {
 
 // === RECOMMENDATIONS ===
 function findRdaForAge(age) {
-  if (age <= 8) return rdas.find(r => r.id === "4-8");
-  if (age <= 13) return rdas.find(r => r.id === "9-13");
-  return rdas.find(r => r.id === "14-18");
+  const numAge = Number(age) || 19;
+  if (numAge <= 8) return rdas.find(r => r.id === "4-8");
+  if (numAge <= 13) return rdas.find(r => r.id === "9-13");
+  if (numAge <= 18) return rdas.find(r => r.id === "14-18");
+  if (numAge <= 30) return rdas.find(r => r.id === "19-30");
+  if (numAge <= 50) return rdas.find(r => r.id === "31-50");
+  return rdas.find(r => r.id === "51+");
 }
 
 function normalizeFoodIndex() {
@@ -180,10 +293,23 @@ function estimateMealNutrients(entries) {
   const idx = normalizeFoodIndex();
   const totals = { calories: 0, protein_g: 0, iron_mg: 0, vitaminC_mg: 0, calcium_mg: 0, vitaminD_IU: 0 };
   for (const e of entries || []) {
+    const factor = (e.grams ?? 100) / 100;
+    
+    // Handle custom foods with nutrients stored directly in entry
+    if (e.customFood && e.nutrients) {
+      totals.calories += (e.nutrients.calories || 0) * factor;
+      totals.protein_g += (e.nutrients.protein_g || 0) * factor;
+      totals.iron_mg += (e.nutrients.iron_mg || 0) * factor;
+      totals.vitaminC_mg += (e.nutrients.vitaminC_mg || 0) * factor;
+      totals.calcium_mg += (e.nutrients.calcium_mg || 0) * factor;
+      totals.vitaminD_IU += (e.nutrients.vitaminD_IU || 0) * factor;
+      continue;
+    }
+    
+    // Handle regular foods from food database
     const key = (e.foodIdOrName || "").toString().toLowerCase();
     const f = idx.get(key);
     if (!f) continue;
-    const factor = (e.grams ?? 100) / 100;
     totals.calories += f.calories * factor;
     totals.protein_g += f.protein_g * factor;
     totals.iron_mg += f.iron_mg * factor;
@@ -295,7 +421,12 @@ app.get("/api/admin/health-data", (req, res) => {
 });
 
 const port = process.env.PORT || 5174;
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`🚀 Server running on http://localhost:${port}`);
   console.log(`📊 Health check: http://localhost:${port}/api/health`);
+}).on('error', (err) => {
+  console.error('Server error:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${port} is already in use. Please stop the other process or use a different port.`);
+  }
 });

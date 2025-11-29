@@ -130,13 +130,18 @@ npm install
 
 3. Start the development server:
 ```bash
-# Start both frontend and backend
+# Recommended: Start both frontend and backend together
 npm run dev:full
 
-# Or start separately:
-npm run dev      # Frontend only (port 5173)
+# Or start separately in different terminals:
+# Terminal 1 - Backend:
 npm run server   # Backend only (port 5174)
+
+# Terminal 2 - Frontend:
+npm run dev      # Frontend only (port 5173)
 ```
+
+**Important:** The backend server must be running for the application to work properly. If you see `ECONNREFUSED` errors, it means the backend is not running. Use `npm run dev:full` to start both servers together.
 
 4. Open your browser:
    - Frontend: http://localhost:5173
@@ -238,6 +243,25 @@ This project demonstrates:
 - Modern React patterns
 - State management
 - Algorithm implementation
+
+## ⚠️ Troubleshooting
+
+### Backend Connection Errors
+If you see `ECONNREFUSED` errors in the console:
+1. Make sure the backend server is running on port 5174
+2. Use `npm run dev:full` to start both servers together
+3. Or start the backend separately: `npm run server`
+
+### Port Already in Use
+If port 5174 is already in use:
+- Stop the process using that port
+- Or change the port in `server/index.js` and update `vite.config.js` proxy target
+
+### Google Password Manager Modal
+If you see a modal about password breaches appearing:
+- This is from Google's browser extension, not the application
+- To disable: Chrome/Edge Settings → Privacy and security → Password Manager → Turn off "Warn you if passwords are exposed in a data breach"
+- Or disable the Google Password Manager extension from your browser's extension settings
 
 ## 📝 Future Enhancements
 

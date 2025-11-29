@@ -10,7 +10,7 @@ function normalizeFoodIndex(foods) {
 }
 
 export function estimateMealNutrients(mealEntries, foods = DEFAULT_FOODS) {
-  // mealEntries: [{ foodIdOrName, grams }]
+  // mealEntries: [{ foodIdOrName, grams, customFood?, nutrients? }]
   const foodIndex = normalizeFoodIndex(foods);
   const totals = {
     calories: 0,
@@ -21,10 +21,23 @@ export function estimateMealNutrients(mealEntries, foods = DEFAULT_FOODS) {
     vitaminD_IU: 0
   };
   for (const entry of mealEntries) {
+    const factor = (entry.grams ?? 100) / 100;
+    
+    // Handle custom foods with nutrients stored directly in entry
+    if (entry.customFood && entry.nutrients) {
+      totals.calories += (entry.nutrients.calories || 0) * factor;
+      totals.protein_g += (entry.nutrients.protein_g || 0) * factor;
+      totals.iron_mg += (entry.nutrients.iron_mg || 0) * factor;
+      totals.vitaminC_mg += (entry.nutrients.vitaminC_mg || 0) * factor;
+      totals.calcium_mg += (entry.nutrients.calcium_mg || 0) * factor;
+      totals.vitaminD_IU += (entry.nutrients.vitaminD_IU || 0) * factor;
+      continue;
+    }
+    
+    // Handle regular foods from food database
     const key = (entry.foodIdOrName || "").toString().toLowerCase();
     const food = foodIndex.get(key);
     if (!food) continue;
-    const factor = (entry.grams ?? 100) / 100;
     totals.calories += food.calories * factor;
     totals.protein_g += food.protein_g * factor;
     totals.iron_mg += food.iron_mg * factor;

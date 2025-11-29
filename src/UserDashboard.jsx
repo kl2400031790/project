@@ -36,15 +36,65 @@ const UserDashboard = () => {
   const [dailyPlan, setDailyPlan] = useState(null);
   const [activeTab, setActiveTab] = useState("tracker");
   const [history, setHistory] = useState([]);
-  const userId = "demo-user";
+  const [foods, setFoods] = useState(DEFAULT_FOODS);
+  const [useCustomFood, setUseCustomFood] = useState(false);
+  const [customFood, setCustomFood] = useState({
+    name: "",
+    calories: 0,
+    protein_g: 0,
+    iron_mg: 0,
+    vitaminC_mg: 0,
+    calcium_mg: 0,
+    vitaminD_IU: 0
+  });
+  // Get userId from localStorage or use demo-user as fallback
+  const getUserId = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return user.id || user.email || "demo-user";
+      }
+    } catch (e) {
+      console.error('Error reading user from localStorage:', e);
+    }
+    return "demo-user";
+  };
+  const userId = getUserId();
 
-  const totals = useMemo(() => estimateMealNutrients(entries), [entries]);
+  const totals = useMemo(() => estimateMealNutrients(entries, foods), [entries, foods]);
   const { rda, deficits } = useMemo(() => computeDeficits(Number(age) || 12, totals), [age, totals]);
-  const suggestions = useMemo(() => suggestFoodsForDeficits(deficits, DEFAULT_FOODS, 5), [deficits]);
+  const suggestions = useMemo(() => suggestFoodsForDeficits(deficits, foods, 5), [deficits, foods]);
 
   const addEntry = async () => {
-    if (!selectedFoodId || !grams) return;
-    const newEntry = { foodIdOrName: selectedFoodId, grams: Number(grams) };
+    if (!grams) return;
+    
+    let newEntry;
+    if (useCustomFood) {
+      // Create custom food entry with nutrient values
+      if (!customFood.name.trim()) {
+        alert("Please enter a food name");
+        return;
+      }
+      // Store custom food data in the entry
+      newEntry = {
+        foodIdOrName: customFood.name.trim(),
+        grams: Number(grams),
+        customFood: true,
+        nutrients: {
+          calories: customFood.calories,
+          protein_g: customFood.protein_g,
+          iron_mg: customFood.iron_mg,
+          vitaminC_mg: customFood.vitaminC_mg,
+          calcium_mg: customFood.calcium_mg,
+          vitaminD_IU: customFood.vitaminD_IU
+        }
+      };
+    } else {
+      if (!selectedFoodId) return;
+      newEntry = { foodIdOrName: selectedFoodId, grams: Number(grams) };
+    }
+    
     const updatedEntries = [...entries, newEntry];
     setEntries(updatedEntries);
     
@@ -57,6 +107,19 @@ const UserDashboard = () => {
         });
         await saveHealthData(updatedEntries);
       } catch {}
+    }
+    
+    // Reset custom food form
+    if (useCustomFood) {
+      setCustomFood({
+        name: "",
+        calories: 0,
+        protein_g: 0,
+        iron_mg: 0,
+        vitaminC_mg: 0,
+        calcium_mg: 0,
+        vitaminD_IU: 0
+      });
     }
   };
 
@@ -94,6 +157,28 @@ const UserDashboard = () => {
       alert("Failed to generate plan");
     }
   };
+
+  // Fetch foods from backend API
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/foods');
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted) {
+            // Combine default foods with backend foods
+            const allFoods = [...DEFAULT_FOODS, ...data.filter(f => !DEFAULT_FOODS.some(df => df.id === f.id))];
+            setFoods(allFoods);
+            if (!selectedFoodId && allFoods.length > 0) {
+              setSelectedFoodId(allFoods[0].id);
+            }
+          }
+        }
+      } catch {}
+    })();
+    return () => { mounted = false };
+  }, []);
 
   useEffect(() => {
     if (!syncServer) return;
@@ -293,8 +378,7 @@ const UserDashboard = () => {
                 <span>Age:</span>
                 <input
                   type="number"
-                  min="4"
-                  max="18"
+                  min="1"
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
                   style={{ width: "80px", padding: "8px" }}
@@ -314,33 +398,182 @@ const UserDashboard = () => {
 
           <div className="card" style={{ marginBottom: "24px" }}>
             <h3 style={{ marginTop: 0 }}>Log Your Meal</h3>
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-              <select
-                value={selectedFoodId}
-                onChange={(e) => setSelectedFoodId(e.target.value)}
-                style={{ padding: "10px", minWidth: "200px" }}
-              >
-          {DEFAULT_FOODS.map(f => (
-            <option key={f.id} value={f.id}>{f.name}</option>
-          ))}
-        </select>
-              <input
-                type="number"
-                min="1"
-                value={grams}
-                onChange={(e) => setGrams(e.target.value)}
-                placeholder="Grams"
-                style={{ padding: "10px", width: "120px" }}
-              />
-              <button onClick={addEntry} style={{ padding: "10px 20px" }}>Add Meal</button>
+            
+            {/* Toggle between preset foods and custom food */}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={useCustomFood}
+                  onChange={(e) => setUseCustomFood(e.target.checked)}
+                />
+                <span>Add custom meal with my own nutrient values</span>
+              </label>
             </div>
+
+            {!useCustomFood ? (
+              // Preset foods selection
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                <select
+                  value={selectedFoodId}
+                  onChange={(e) => setSelectedFoodId(e.target.value)}
+                  style={{ padding: "10px", minWidth: "200px" }}
+                >
+                  {foods.map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  value={grams}
+                  onChange={(e) => setGrams(e.target.value)}
+                  placeholder="Grams"
+                  style={{ padding: "10px", width: "120px" }}
+                />
+                <button onClick={addEntry} style={{ padding: "10px 20px" }}>Add Meal</button>
+              </div>
+            ) : (
+              // Custom food input form
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+                  <div>
+                    <label style={{ display: "block", marginBottom: "6px", fontWeight: "500", color: "#374151" }}>
+                      Food/Meal Name <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={customFood.name}
+                      onChange={(e) => setCustomFood({ ...customFood, name: e.target.value })}
+                      placeholder="e.g., Grilled Chicken Salad"
+                      style={{ padding: "10px", width: "100%" }}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", marginBottom: "6px", fontWeight: "500", color: "#374151" }}>
+                      Amount (Grams) <span style={{ color: "#ef4444" }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={grams}
+                      onChange={(e) => setGrams(e.target.value)}
+                      placeholder="e.g., 200"
+                      style={{ padding: "10px", width: "100%" }}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "16px" }}>
+                  <h4 style={{ marginTop: 0, marginBottom: "12px", color: "#374151" }}>Nutrient Values (per 100g)</h4>
+                  <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "16px" }}>
+                    Enter nutrient values per 100g of food. Leave as 0 if you don't know the value.
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
+                    <div>
+                      <label style={{ display: "block", marginBottom: "6px", fontWeight: "500", color: "#374151" }}>
+                        Calories (kcal)
+                      </label>
+                      <input
+                        type="number"
+                        value={customFood.calories}
+                        onChange={(e) => setCustomFood({ ...customFood, calories: e.target.value || 0 })}
+                        placeholder="e.g., 165"
+                        style={{ padding: "10px", width: "100%" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", marginBottom: "6px", fontWeight: "500", color: "#374151" }}>
+                        Protein (grams)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={customFood.protein_g}
+                        onChange={(e) => setCustomFood({ ...customFood, protein_g: e.target.value || 0 })}
+                        placeholder="e.g., 31.0"
+                        style={{ padding: "10px", width: "100%" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", marginBottom: "6px", fontWeight: "500", color: "#374151" }}>
+                        Iron (milligrams)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={customFood.iron_mg}
+                        onChange={(e) => setCustomFood({ ...customFood, iron_mg: e.target.value || 0 })}
+                        placeholder="e.g., 0.9"
+                        style={{ padding: "10px", width: "100%" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", marginBottom: "6px", fontWeight: "500", color: "#374151" }}>
+                        Vitamin C (milligrams)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={customFood.vitaminC_mg}
+                        onChange={(e) => setCustomFood({ ...customFood, vitaminC_mg: e.target.value || 0 })}
+                        placeholder="e.g., 53.2"
+                        style={{ padding: "10px", width: "100%" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", marginBottom: "6px", fontWeight: "500", color: "#374151" }}>
+                        Calcium (milligrams)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={customFood.calcium_mg}
+                        onChange={(e) => setCustomFood({ ...customFood, calcium_mg: e.target.value || 0 })}
+                        placeholder="e.g., 113.0"
+                        style={{ padding: "10px", width: "100%" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", marginBottom: "6px", fontWeight: "500", color: "#374151" }}>
+                        Vitamin D (IU)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={customFood.vitaminD_IU}
+                        onChange={(e) => setCustomFood({ ...customFood, vitaminD_IU: e.target.value || 0 })}
+                        placeholder="e.g., 52.0"
+                        style={{ padding: "10px", width: "100%" }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <button onClick={addEntry} style={{ padding: "12px 24px", alignSelf: "flex-start", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "600" }}>
+                  Add Custom Meal
+                </button>
+                <p style={{ fontSize: "12px", color: "#6b7280", margin: 0 }}>
+                  <span style={{ color: "#ef4444" }}>*</span> Required fields. All nutrient values should be per 100g of food. 
+                  The system will automatically calculate nutrients based on the amount (grams) you consumed.
+                </p>
+              </div>
+            )}
             
             {entries.length > 0 && (
               <div style={{ marginTop: "16px" }}>
                 <h4>Today's Meals</h4>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {entries.map((entry, idx) => {
-            const food = DEFAULT_FOODS.find(f => f.id === entry.foodIdOrName) || { name: entry.foodIdOrName };
+            let foodName = entry.foodIdOrName;
+            if (entry.customFood) {
+              foodName = entry.foodIdOrName + " (Custom)";
+            } else {
+              const food = foods.find(f => f.id === entry.foodIdOrName);
+              if (food) foodName = food.name;
+            }
             return (
                       <div
                         key={idx}
@@ -349,14 +582,15 @@ const UserDashboard = () => {
                           justifyContent: "space-between",
                           alignItems: "center",
                           padding: "12px",
-                          background: "#f9fafb",
-                          borderRadius: "6px"
+                          background: entry.customFood ? "#fef3c7" : "#f9fafb",
+                          borderRadius: "6px",
+                          border: entry.customFood ? "1px solid #fbbf24" : "none"
                         }}
                       >
-                        <span style={{ fontWeight: "500" }}>{food.name} - {entry.grams}g</span>
+                        <span style={{ fontWeight: "500" }}>{foodName} - {entry.grams}g</span>
                         <button
                           onClick={() => removeEntry(idx)}
-                          style={{ background: "#ef4444", padding: "6px 12px" }}
+                          style={{ background: "#ef4444", padding: "6px 12px", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
                         >
                           Remove
                         </button>

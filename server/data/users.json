@@ -16,5 +16,41 @@
     "email": "123@gmail.com",
     "password": "123@1",
     "role": "user"
+  },
+  {
+    "id": "user_1764409818585",
+    "email": "yashaswi@gmail.com",
+    "password": "123456",
+    "role": "user"
+  },
+  {
+    "id": "user_1764410412353",
+    "email": "admin@gmail.com",
+    "password": "123456",
+    "role": "admin"
+  },
+  {
+    "id": "user_1764430300578",
+    "email": "thushara@gmail.com",
+    "password": "1234567",
+    "role": "admin"
+  },
+  {
+    "id": "user_1764430369525",
+    "email": "divya@gmail.com",
+    "password": "12345678",
+    "role": "admin"
+  },
+  {
+    "id": "user_1764431307697",
+    "email": "fedf@gmail.com",
+    "password": "123456789",
+    "role": "user"
+  },
+  {
+    "id": "user_1764431425395",
+    "email": "tell@gmail.com",
+    "password": "123456",
+    "role": "user"
   }
 ]
