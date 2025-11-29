@@ -136,10 +136,7 @@ const SignUp = () => {
         alignItems: "center",
         justifyContent: "center",
         padding: "40px 20px",
-        backgroundImage: "url('/food-pattern.png')",
-        backgroundSize: "200px 200px",
-        backgroundRepeat: "repeat",
-        backgroundPosition: "0 0"
+        backgroundColor: "#f9fafb"
       }}>
         <div className="signin-container" style={{
           maxWidth: "600px",
@@ -184,10 +181,7 @@ const SignUp = () => {
       alignItems: "center",
       justifyContent: "center",
       padding: "40px 20px",
-      backgroundImage: "url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'foodPattern\' x=\'0\' y=\'0\' width=\'100\' height=\'100\' patternUnits=\'userSpaceOnUse\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'8\' fill=\'%2322c55e\' opacity=\'0.1\'/%3E%3Ccircle cx=\'80\' cy=\'30\' r=\'10\' fill=\'%23f97316\' opacity=\'0.1\'/%3E%3Ccircle cx=\'50\' cy=\'70\' r=\'12\' fill=\'%23eab308\' opacity=\'0.1\'/%3E%3Ccircle cx=\'30\' cy=\'80\' r=\'6\' fill=\'%2322c55e\' opacity=\'0.15\'/%3E%3Ccircle cx=\'70\' cy=\'60\' r=\'9\' fill=\'%23f97316\' opacity=\'0.1\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\'100\' height=\'100\' fill=\'url(%23foodPattern)\'/%3E%3C/svg%3E')",
-      backgroundSize: "200px 200px",
-      backgroundRepeat: "repeat",
-      backgroundPosition: "0 0"
+      backgroundColor: "#f9fafb"
     }}>
       <div className="signin-container" style={{
         maxWidth: "600px",

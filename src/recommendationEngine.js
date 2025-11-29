@@ -67,14 +67,20 @@ export function computeDeficits(age, totals) {
   return { rda, deficits };
 }
 
-export function suggestFoodsForDeficits(deficits, foods = DEFAULT_FOODS, limit = 3) {
+export function suggestFoodsForDeficits(deficits, foods = DEFAULT_FOODS, limit = 3, healthCondition = null) {
+  // Filter foods based on health condition
+  let filteredFoods = foods;
+  if (healthCondition) {
+    filteredFoods = filterFoodsForCondition(foods, healthCondition);
+  }
+  
   // score foods by how much they close the largest gaps per 100g
   const keys = Object.entries(deficits)
     .filter(([k]) => k !== "calories") // de-emphasize calories for healthfulness
     .sort((a, b) => b[1].gap - a[1].gap)
     .map(([k]) => k);
 
-  const scored = foods.map((f) => {
+  const scored = filteredFoods.map((f) => {
     let score = 0;
     for (const k of keys) {
       const per100 = f[k] ?? 0;
@@ -100,25 +106,71 @@ function weightForNutrient(key) {
   }
 }
 
-export function generateDailyPlan(age, desiredCalories, foods = DEFAULT_FOODS) {
+// Filter foods based on health condition
+function filterFoodsForCondition(foods, condition) {
+  if (!condition) return foods;
+  
+  const conditionLower = condition.toLowerCase();
+  
+  // Diabetes-friendly foods (low sugar, high fiber, low GI)
+  if (conditionLower.includes("diabetes")) {
+    return foods.filter(f => {
+      const name = f.name.toLowerCase();
+      // Prefer: vegetables, lean proteins, whole grains, low-sugar fruits
+      // Avoid: high-sugar items (though our food list doesn't have many)
+      return !name.includes("cereal") || name.includes("fortified"); // Keep fortified cereal for nutrients
+    });
+  }
+  
+  // Heart disease - focus on omega-3, low saturated fat
+  if (conditionLower.includes("heart")) {
+    return foods.filter(f => {
+      const name = f.name.toLowerCase();
+      // Prefer: fish, vegetables, fruits, whole grains
+      return !name.includes("chicken") || name.includes("breast"); // Prefer lean meats
+    });
+  }
+  
+  // Obesity - focus on high protein, high fiber, low calorie density
+  if (conditionLower.includes("obesity")) {
+    return foods.filter(f => {
+      // Prefer foods with good protein-to-calorie ratio
+      const proteinRatio = f.protein_g / (f.calories || 1);
+      return proteinRatio > 0.1 || f.calories < 100; // High protein or low calorie
+    });
+  }
+  
+  // Anemia - focus on iron-rich foods
+  if (conditionLower.includes("anemia")) {
+    return foods.sort((a, b) => (b.iron_mg || 0) - (a.iron_mg || 0));
+  }
+  
+  return foods;
+}
+
+export function generateDailyPlan(age, desiredCalories, foods = DEFAULT_FOODS, healthCondition = null) {
+  // Filter foods based on health condition
+  const filteredFoods = filterFoodsForCondition(foods, healthCondition);
+  
   // very simple greedy planner: pick foods that close largest nutrient gaps until calories reached
   const targetCalories = desiredCalories;
   let meals = [];
-  let totals = estimateMealNutrients([], foods);
+  let totals = estimateMealNutrients([], filteredFoods);
   let { deficits } = computeDeficits(age, totals);
   let caloriesAccum = 0;
 
   while (caloriesAccum < targetCalories && meals.length < 6) {
-    const suggestions = suggestFoodsForDeficits(deficits, foods, 1);
-    const pick = suggestions[0] ?? foods[0];
+    const suggestions = suggestFoodsForDeficits(deficits, filteredFoods, 1);
+    const pick = suggestions[0] ?? filteredFoods[0];
+    if (!pick) break;
     const portionGrams = 100; // fixed portion
     meals.push({ foodIdOrName: pick.id, grams: portionGrams });
-    totals = estimateMealNutrients(meals, foods);
+    totals = estimateMealNutrients(meals, filteredFoods);
     caloriesAccum = totals.calories;
     deficits = computeDeficits(age, totals).deficits;
   }
 
-  return { meals, totals, deficits };
+  return { meals, totals, deficits, healthCondition };
 }
 
 

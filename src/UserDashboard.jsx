@@ -64,7 +64,14 @@ const UserDashboard = () => {
 
   const totals = useMemo(() => estimateMealNutrients(entries, foods), [entries, foods]);
   const { rda, deficits } = useMemo(() => computeDeficits(Number(age) || 12, totals), [age, totals]);
-  const suggestions = useMemo(() => suggestFoodsForDeficits(deficits, foods, 5), [deficits, foods]);
+  const healthCondition = useMemo(() => {
+    try {
+      return localStorage.getItem("userHealthCondition") || null;
+    } catch {
+      return null;
+    }
+  }, []);
+  const suggestions = useMemo(() => suggestFoodsForDeficits(deficits, foods, 5, healthCondition), [deficits, foods, healthCondition]);
 
   const addEntry = async () => {
     if (!grams) return;
@@ -151,7 +158,9 @@ const UserDashboard = () => {
 
   const generatePlan = async () => {
     try {
-      const plan = generateDailyPlan(Number(age) || 12, rda.calories, DEFAULT_FOODS);
+      // Get health condition from localStorage
+      const healthCondition = localStorage.getItem("userHealthCondition") || null;
+      const plan = generateDailyPlan(Number(age) || 12, rda.calories, foods, healthCondition);
       setDailyPlan(plan);
     } catch (e) {
       alert("Failed to generate plan");
@@ -385,6 +394,18 @@ const UserDashboard = () => {
                 />
               </label>
               <span style={{ color: "#6b7280" }}>{findRdaForAge(Number(age) || 12).label}</span>
+              {healthCondition && (
+                <div style={{
+                  padding: "8px 16px",
+                  background: "#fce7f3",
+                  borderRadius: "6px",
+                  border: "1px solid #f9a8d4",
+                  color: "#831843",
+                  fontWeight: "600"
+                }}>
+                  Health Condition: {healthCondition}
+                </div>
+              )}
               <label style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <input
                   type="checkbox"
@@ -394,6 +415,20 @@ const UserDashboard = () => {
                 <span>Sync with server</span>
               </label>
             </div>
+            {healthCondition && (
+              <div style={{
+                marginTop: "16px",
+                padding: "12px",
+                background: "#f0fdf4",
+                borderRadius: "6px",
+                border: "1px solid #86efac",
+                fontSize: "14px",
+                color: "#166534"
+              }}>
+                <strong>Note:</strong> Your diet plans and recommendations are tailored for {healthCondition}. 
+                Visit the homepage to change your health condition.
+              </div>
+            )}
           </div>
 
           <div className="card" style={{ marginBottom: "24px" }}>
@@ -689,6 +724,11 @@ const UserDashboard = () => {
             <h3 style={{ marginTop: 0 }}>Generate Personalized Diet Plan</h3>
             <p style={{ color: "#6b7280", marginBottom: "16px" }}>
               Get a complete daily meal plan tailored to your age and nutritional needs.
+              {healthCondition && (
+                <span style={{ color: "#ec4899", fontWeight: "600", display: "block", marginTop: "8px" }}>
+                  Your plan will be optimized for {healthCondition}.
+                </span>
+              )}
             </p>
             <button onClick={generatePlan} style={{ padding: "12px 24px", fontSize: "16px" }}>
               Generate Daily Plan
@@ -698,6 +738,19 @@ const UserDashboard = () => {
           {dailyPlan && (
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Your Daily Meal Plan</h3>
+              {dailyPlan.healthCondition && (
+                <div style={{
+                  padding: "12px",
+                  background: "#fce7f3",
+                  borderRadius: "6px",
+                  marginBottom: "16px",
+                  border: "1px solid #f9a8d4",
+                  color: "#831843",
+                  fontWeight: "600"
+                }}>
+                  ✓ Optimized for: {dailyPlan.healthCondition}
+                </div>
+              )}
               <div style={{ marginBottom: "16px" }}>
                 <h4>Meals</h4>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
