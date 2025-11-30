@@ -3,13 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://kl2400031790.github.io/project/",
   "scripts": {
     "dev": "vite",
     "server": "node server/index.js",
     "dev:full": "concurrently \"npm:server\" \"npm:dev\"",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+  "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "chart.js": "^4.5.0",
